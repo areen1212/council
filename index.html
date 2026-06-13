@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<title>The Council</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1116;--panel:#161B24;--panel2:#1B212C;--line:#2A313F;
+    --txt:#E6E3D8;--mut:#8A8F9C;--faint:#5A6170;
+    --brass:#C9A55C;--brass-dim:#8a7035;
+    --c-eng:#5FB3C9;--c-cor:#E0A458;--c-str:#6FB58A;--c-cri:#C77DAE;--c-arc:#8C8CE0;
+    --ok:#6FB58A;--err:#D9776B;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--txt);
+    font-family:'Inter',system-ui,sans-serif;font-size:15px;line-height:1.6;
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--brass)}
+  ::selection{background:var(--brass);color:#000}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px}
+
+  /* header */
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px;flex-wrap:wrap}
+  .brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:38px;letter-spacing:-.01em;
+    margin:0;line-height:1}
+  .brand .sub{color:var(--mut);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;
+    font-family:'JetBrains Mono',monospace;margin-top:8px}
+  .keybox{display:flex;flex-direction:column;gap:6px;min-width:230px}
+  .keybox label{font-size:11px;color:var(--mut);font-family:'JetBrains Mono',monospace;
+    text-transform:uppercase;letter-spacing:.1em}
+  .keyrow{display:flex;gap:6px}
+  input[type=text],input[type=password],textarea{background:var(--panel);border:1px solid var(--line);
+    color:var(--txt);border-radius:8px;padding:9px 11px;font-family:'Inter',sans-serif;
+    font-size:13.5px;width:100%}
+  input:focus,textarea:focus{outline:2px solid var(--brass-dim);outline-offset:0;border-color:var(--brass-dim)}
+  .keyrow button{white-space:nowrap}
+
+  button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--txt);
+    border-radius:8px;padding:9px 13px;font-size:13px;font-family:'JetBrains Mono',monospace;
+    transition:border-color .15s,background .15s}
+  button:hover{border-color:var(--brass-dim)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .keystatus{font-size:11px;font-family:'JetBrains Mono',monospace}
+  .keystatus.ok{color:var(--ok)}.keystatus.no{color:var(--faint)}
+
+  /* bench */
+  .bench{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px}
+  .seat{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--seatc,var(--line));
+    border-radius:8px;padding:10px 9px;position:relative;transition:box-shadow .2s}
+  .seat.active{box-shadow:0 0 0 1px var(--seatc),0 0 18px -6px var(--seatc)}
+  .seat .role{font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:var(--seatc)}
+  .seat .dom{font-size:10.5px;color:var(--mut);margin-top:2px;line-height:1.3}
+  .seat .mdl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);margin-top:6px;word-break:break-all}
+  .seat .dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .seat.active .dot{background:var(--seatc);box-shadow:0 0 8px var(--seatc)}
+  .seat.done .dot{background:var(--ok)}
+  .arbiter-seat{background:linear-gradient(180deg,#1d1a12,#161b24);
+    border:1px solid #3a3320;border-top:2px solid var(--brass);border-radius:8px;padding:10px 12px;
+    margin-bottom:18px;display:flex;align-items:center;gap:12px}
+  .arbiter-seat .role{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--brass)}
+  .arbiter-seat .dom{font-size:11px;color:var(--mut)}
+  .arbiter-seat .mdl{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);margin-left:auto;text-align:right}
+
+  /* phases */
+  .phases{display:flex;gap:0;margin:20px 0 14px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .phase{flex:1;padding:9px 8px;text-align:center;font-family:'JetBrains Mono',monospace;border-right:1px solid var(--line)}
+  .phase:last-child{border-right:none}
+  .phase .n{font-size:9.5px;color:var(--faint)}
+  .phase .t{font-size:11px;color:var(--mut);margin-top:2px}
+  .phase.active{background:var(--panel2)}
+  .phase.active .t{color:var(--brass)}.phase.active .n{color:var(--brass-dim)}
+  .phase.done .t{color:var(--ok)}
+
+  /* composer */
+  .composer{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+  .composer textarea{min-height:78px;resize:vertical}
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .toggle{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut);font-family:'JetBrains Mono',monospace}
+  .toggle input{accent-color:var(--brass)}
+  .run{background:var(--brass);color:#15110a;border-color:var(--brass);font-weight:500;padding:10px 22px;font-size:14px}
+  .run:hover{background:#d8b76e;border-color:#d8b76e}
+  .hint{font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace}
+
+  /* transcript */
+  .transcript{margin-top:24px;display:flex;flex-direction:column;gap:14px}
+  .stage-head{font-family:'Fraunces',serif;font-size:21px;font-weight:500;margin:18px 0 2px;
+    display:flex;align-items:baseline;gap:10px}
+  .stage-head .sn{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--brass-dim)}
+  .stage-sub{font-size:12px;color:var(--mut);margin-bottom:6px}
+  .msg{border:1px solid var(--line);border-left:3px solid var(--seatc,var(--line));
+    background:var(--panel);border-radius:8px;padding:13px 15px}
+  .msg .who{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+  .msg .who .nm{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--seatc);flex-shrink:0}
+  .msg .who .md{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);margin-left:auto;word-break:break-all;flex-shrink:1}
+  .msg .body{font-size:14px}
+  /* rendered markdown inside .body */
+  .msg .body p{margin:0 0 8px}.msg .body p:last-child{margin:0}
+  .msg .body h1,.msg .body h2,.msg .body h3{font-family:'Fraunces',serif;font-weight:600;
+    margin:12px 0 4px;color:var(--txt)}
+  .msg .body h1{font-size:17px}.msg .body h2{font-size:15px}.msg .body h3{font-size:14px}
+  .msg .body ul,.msg .body ol{margin:4px 0 8px;padding-left:20px}
+  .msg .body li{margin-bottom:3px}
+  .msg .body strong,.msg .body b{color:var(--txt);font-weight:600}
+  .msg .body em,.msg .body i{font-style:italic;color:var(--mut)}
+  .msg .body code{font-family:'JetBrains Mono',monospace;font-size:12px;
+    background:var(--panel2);padding:1px 5px;border-radius:4px}
+  .msg .body pre{background:var(--panel2);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:8px 0}
+  .msg .body pre code{background:none;padding:0}
+  .msg .body blockquote{border-left:3px solid var(--line);margin:6px 0;padding:4px 10px;color:var(--mut)}
+  .msg .body hr{border:none;border-top:1px solid var(--line);margin:10px 0}
+  .msg.loading .body{color:var(--mut);font-style:italic}
+  .verdict{border:1px solid var(--brass-dim);border-radius:10px;
+    background:linear-gradient(180deg,#1c190f,#161b24);padding:16px 18px}
+  .verdict .who .nm{color:var(--brass)}
+  .reasoning{border:1px dashed var(--brass-dim);border-radius:10px;padding:13px 16px;
+    background:#14130d;margin-top:10px}
+  .reasoning .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--brass-dim);margin-bottom:6px}
+  .reasoning .body{font-size:13px;color:var(--mut)}
+  .err{color:var(--err);font-size:12.5px;font-family:'JetBrains Mono',monospace}
+  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--seatc,var(--brass));animation:p 1s infinite}
+  @keyframes p{0%,100%{opacity:.25}50%{opacity:1}}
+  details.help{margin-top:30px;border-top:1px solid var(--line);padding-top:16px}
+  details.help summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mut)}
+  details.help .h{font-size:13px;color:var(--mut);margin-top:12px;line-height:1.7}
+  details.help code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--txt)}
+  @media(max-width:720px){
+    .bench{grid-template-columns:repeat(2,1fr)}
+    .phases{flex-wrap:wrap}.phase{flex:1 1 40%;border-bottom:1px solid var(--line)}
+    .brand h1{font-size:30px}
+    .arbiter-seat{flex-wrap:wrap}.arbiter-seat .mdl{margin-left:0;text-align:left}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- CORS warning — shown only when opened as a local file -->
+  <div id="corsWarn" style="display:none;background:#2a1a0e;border:1px solid #8a4a1a;border-radius:10px;
+    padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.7;color:#e8c89a">
+    <strong style="color:#e0873a;font-size:14px">This file must be served from HTTPS to work.</strong><br>
+    Your browser blocks API calls from local files (<code style="font-size:11px;background:#1a1008;padding:1px 4px;border-radius:3px">file://</code> / <code style="font-size:11px;background:#1a1008;padding:1px 4px;border-radius:3px">content://</code>).<br><br>
+    <strong style="color:#c9a55c">Easiest fix — GitHub Pages (free, 2 minutes):</strong><br>
+    1. Go to <a href="https://github.com" target="_blank" style="color:#c9a55c">github.com</a> and sign in (or create a free account).<br>
+    2. Click <strong>New repository</strong>. Name it <code style="font-size:11px;background:#1a1008;padding:1px 4px;border-radius:3px">council</code>. Set it to <strong>Public</strong>. Click Create.<br>
+    3. Click <strong>Add file &rarr; Upload files</strong>. Upload this HTML file. Rename it to <code style="font-size:11px;background:#1a1008;padding:1px 4px;border-radius:3px">index.html</code> before uploading.<br>
+    4. Go to <strong>Settings &rarr; Pages &rarr; Source</strong>: choose <em>Deploy from branch → main → / (root)</em>. Save.<br>
+    5. GitHub gives you a URL like <code style="font-size:11px;background:#1a1008;padding:1px 4px;border-radius:3px">https://yourusername.github.io/council/</code>. Open that on your phone.<br><br>
+    <strong style="color:#c9a55c">Alternative — Netlify Drop (even faster):</strong><br>
+    Go to <a href="https://app.netlify.com/drop" target="_blank" style="color:#c9a55c">app.netlify.com/drop</a> on a PC. Drag and drop this HTML file onto the page. You get an instant HTTPS URL.
+  </div>
+
+  <header>
+    <div class="brand">
+      <h1>The Council</h1>
+      <div class="sub">five minds · one debate · one verdict</div>
+    </div>
+    <div class="keybox">
+      <label for="key">OpenRouter API key</label>
+      <div class="keyrow">
+        <input type="password" id="key" placeholder="sk-or-v1-…" autocomplete="off">
+        <button id="saveKey">Save</button>
+      </div>
+      <span class="keystatus no" id="keyStatus">No key saved</span>
+    </div>
+  </header>
+
+  <div class="bench" id="bench"></div>
+  <div class="arbiter-seat" id="arbiterSeat"></div>
+
+  <div class="composer">
+    <textarea id="prompt" placeholder="Put your question to the Council — YouTube ideas, history/geography check, games, film, software issue, or a news question."></textarea>
+    <div class="controls">
+      <label class="toggle"><input type="checkbox" id="webToggle"> web search (needs credits)</label>
+      <span class="hint">~17 calls per session</span>
+      <button class="run" id="run">Convene the Council</button>
+    </div>
+  </div>
+
+  <div class="phases" id="phases"></div>
+  <div class="transcript" id="transcript"></div>
+
+  <details class="help">
+    <summary>Notes, rate limits & upgrade paths</summary>
+    <div class="h" id="helpBody"></div>
+  </details>
+
+</div>
+<script>
+/* ============================================================
+   CONFIG — verified against openrouter.ai/collections/free-models 2026-06-13
+   Each member has a primary slug and a fallback slug.
+   If the primary returns 404, the app auto-retries with the fallback.
+   ============================================================ */
+const COUNCIL = [
+  { key:'eng', name:'The Engineer',
+    domain:'Tech · software · troubleshooting',
+    model:'openai/gpt-oss-120b:free',
+    fallback:'nvidia/nemotron-3-super-120b-a12b:free',
+    color:'var(--c-eng)' },
+  { key:'cor', name:'The Correspondent',
+    domain:'News · current events · fact-checking',
+    model:'openai/gpt-oss-20b:free',
+    fallback:'google/gemma-4-31b-it:free',
+    color:'var(--c-cor)' },
+  { key:'str', name:'The Strategist',
+    domain:'Board games · video games · YouTube ideas',
+    model:'nvidia/nemotron-3-super-120b-a12b:free',
+    fallback:'openai/gpt-oss-120b:free',
+    color:'var(--c-str)' },
+  { key:'cri', name:'The Critic',
+    domain:'Film · TV · narrative · entertainment',
+    model:'google/gemma-4-26b-a4b-it:free',
+    fallback:'google/gemma-4-31b-it:free',
+    color:'var(--c-cri)' },
+  { key:'arc', name:'The Archivist',
+    domain:'History · geography · sourcing',
+    model:'google/gemma-4-31b-it:free',
+    fallback:'nvidia/nemotron-3-nano-30b-a3b:free',
+    color:'var(--c-arc)' },
+];
+const ARBITER = {
+  name:'The Arbiter',
+  domain:'Judges the debate — writes the verdict',
+  model:'nvidia/nemotron-3-ultra-550b-a55b:free',
+  fallback:'openai/gpt-oss-120b:free',
+};
+
+const PHASES=[
+  {n:'I',t:'Convene'},{n:'II',t:'Opening'},
+  {n:'III',t:'Cross-Exam'},{n:'IV',t:'Closing'},{n:'V',t:'Verdict'},
+];
+const API='https://openrouter.ai/api/v1/chat/completions';
+
+/* ============================================================ KEY STORAGE */
+let memKey='';
+function getKey(){try{return localStorage.getItem('ork')||memKey;}catch(e){return memKey;}}
+function setKey(k){memKey=k;try{localStorage.setItem('ork',k);}catch(e){}}
+function refreshKeyUI(){
+  const k=getKey(),s=document.getElementById('keyStatus');
+  if(k){s.textContent='Key saved · '+k.slice(0,10)+'…';s.className='keystatus ok';}
+  else{s.textContent='No key saved';s.className='keystatus no';}
+}
+
+/* ============================================================ MARKDOWN RENDERER
+   Lightweight converter: handles bold, italic, headers, lists, code, hr, br.
+   Safe — does not use innerHTML with raw user model output directly.
+   We sanitise < and > first, then re-introduce only our own safe tags. */
+function renderMD(raw){
+  if(!raw) return '';
+  // escape HTML entities first
+  let s = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // fenced code blocks
+  s = s.replace(/```[\w]*\n([\s\S]*?)```/g,(_,c)=>`<pre><code>${c.trim()}</code></pre>`);
+  // inline code
+  s = s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // headings
+  s = s.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  s = s.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  s = s.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // bold + italic
+  s = s.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  s = s.replace(/__(.+?)__/g,'<strong>$1</strong>');
+  s = s.replace(/_(.+?)_/g,'<em>$1</em>');
+  // horizontal rule
+  s = s.replace(/^[-*_]{3,}$/gm,'<hr>');
+  // blockquote
+  s = s.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  // unordered lists
+  s = s.replace(/^(\s*[-*+] .+(\n\s*[-*+] .+)*)/gm, block=>{
+    const items = block.split('\n').filter(l=>l.trim()).map(l=>'<li>'+l.replace(/^\s*[-*+] /,'')+' </li>');
+    return '<ul>'+items.join('')+'</ul>';
+  });
+  // ordered lists
+  s = s.replace(/^(\s*\d+\. .+(\n\s*\d+\. .+)*)/gm, block=>{
+    const items = block.split('\n').filter(l=>l.trim()).map(l=>'<li>'+l.replace(/^\s*\d+\. /,'')+' </li>');
+    return '<ol>'+items.join('')+'</ol>';
+  });
+  // paragraphs — split on double newlines, wrap non-block lines
+  const blocks = s.split(/\n{2,}/);
+  s = blocks.map(b=>{
+    b = b.trim();
+    if(!b) return '';
+    if(/^<(h[123]|ul|ol|pre|hr|blockquote)/.test(b)) return b;
+    // single newlines become <br> inside paragraphs
+    return '<p>'+b.replace(/\n/g,'<br>')+'</p>';
+  }).join('\n');
+  return s;
+}
+
+/* ============================================================ SYSTEM PROMPTS */
+function memberSys(m){
+  return `You are ${m.name}, one of five members of a standing advisory Council.
+Your home turf is: ${m.domain}. You may speak on anything, but you bring this lens first.
+Voice: direct, practitioner-level, zero fluff, no flattery. Plain language.
+Format your response with markdown: use **bold** for key points, use bullet lists where helpful, use headers for distinct sections. Keep it tight.
+If a claim is wrong, say it is wrong and say why. Do not hedge to be polite.
+If you are unsure, say so rather than inventing facts.`;
+}
+const ARB_DEBATE=`You are The Arbiter of an AI Council. You are the sharpest mind in the room.
+Score each member briefly on: accuracy, usefulness, and whether their critiques landed.
+Call out anyone who is confidently wrong, vague, or sycophantic.
+Use markdown. One or two lines per member, then one line on who is currently ahead.`;
+const ARB_FINAL=`You are The Arbiter of an AI Council — the most capable mind present.
+Synthesize ONE authoritative answer that takes the strongest, best-supported points from any member and discards the weak or wrong ones. Be decisive and practical. Use clear markdown formatting.
+Respond with ONLY valid JSON, no markdown wrapping, no backticks:
+{"final_answer":"the combined best answer in markdown format","reasoning":"2-5 sentences on which members you leaned on, what you cut, and why"}`;
+
+/* ============================================================ API CALL WITH FALLBACK */
+async function callModel(model, fallback, messages, useWeb){
+  const key=getKey();
+  if(!key) throw new Error('No API key. Paste your OpenRouter key up top and hit Save.');
+  async function attempt(slug){
+    const body={model:slug,messages,temperature:0.7,max_tokens:1200};
+    if(useWeb) body.plugins=[{id:'web',max_results:3}];
+    const res=await fetch(API,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!res.ok){
+      let detail='';
+      try{const j=await res.json();detail=j.error?.message||JSON.stringify(j.error||j);}catch(e){detail=res.statusText;}
+      if(res.status===404||res.status===422){
+        const err=new Error('NOT_FREE:'+slug);err.notFree=true;err.detail=detail;throw err;
+      }
+      if(res.status===429) throw new Error('Rate limited (free tier ~20/min, ~50/day). Wait a minute and try again, or deposit $10 for 1000/day.');
+      if(res.status===401) throw new Error('Key rejected (401). Double-check your OpenRouter key.');
+      if(res.status===402) throw new Error('Credits needed (402). Web search and some routes require a deposit on OpenRouter.');
+      throw new Error('HTTP '+res.status+': '+detail);
+    }
+    const data=await res.json();
+    const txt=data.choices?.[0]?.message?.content;
+    if(!txt) throw new Error('Empty response from '+slug);
+    return Array.isArray(txt)?txt.map(p=>p.text||'').join(''):txt;
+  }
+  try{
+    return await attempt(model);
+  } catch(e){
+    if(e.notFree && fallback && fallback!==model){
+      return await attempt(fallback);
+    }
+    throw e;
+  }
+}
+
+/* ============================================================ RENDER HELPERS */
+const $=id=>document.getElementById(id);
+function buildBench(){
+  $('bench').innerHTML=COUNCIL.map(m=>`
+    <div class="seat" id="seat-${m.key}" style="--seatc:${m.color}">
+      <div class="dot"></div>
+      <div class="role">${m.name}</div>
+      <div class="dom">${m.domain}</div>
+      <div class="mdl">${m.model.replace(':free','')}</div>
+    </div>`).join('');
+  $('arbiterSeat').innerHTML=`
+    <div><div class="role">${ARBITER.name}</div><div class="dom">${ARBITER.domain}</div></div>
+    <div class="mdl">${ARBITER.model.replace(':free','')}</div>`;
+}
+function buildPhases(){
+  $('phases').innerHTML=PHASES.map((p,i)=>`
+    <div class="phase" id="ph-${i}"><div class="n">PHASE ${p.n}</div><div class="t">${p.t}</div></div>`).join('');
+}
+function setPhase(i){
+  PHASES.forEach((_,j)=>{
+    const el=$('ph-'+j);el.classList.remove('active','done');
+    if(j<i)el.classList.add('done');if(j===i)el.classList.add('active');
+  });
+}
+function seatState(key,state){
+  const s=$('seat-'+key);if(!s)return;
+  s.classList.remove('active','done');if(state)s.classList.add(state);
+}
+function addStageHead(sn,title,sub){
+  const d=document.createElement('div');
+  d.innerHTML=`<div class="stage-head"><span class="sn">${sn}</span>${title}</div><div class="stage-sub">${sub}</div>`;
+  $('transcript').appendChild(d);
+}
+function msgCard(m){
+  const card=document.createElement('div');
+  card.className='msg loading';
+  card.style.setProperty('--seatc',m.color||'var(--brass)');
+  card.innerHTML=`<div class="who"><span class="nm">${m.name}</span><span class="md">${(m.model||'').replace(':free','')}</span></div>
+    <div class="body"><span class="pulse"></span> deliberating…</div>`;
+  $('transcript').appendChild(card);
+  return card;
+}
+function fillCard(card,text){
+  card.classList.remove('loading');
+  card.querySelector('.body').innerHTML=renderMD(text);
+}
+function failCard(card,err){
+  card.classList.remove('loading');
+  card.querySelector('.body').innerHTML=`<span class="err">⚠ ${err}</span>`;
+}
+function scrollEnd(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}
+
+/* ============================================================ ORCHESTRATION */
+let running=false;
+async function convene(){
+  if(running)return;
+  const q=$('prompt').value.trim();
+  if(!q){$('prompt').focus();return;}
+  if(!getKey()){alert('Paste your OpenRouter API key first.');return;}
+  running=true;$('run').disabled=true;$('run').textContent='In session…';
+  $('transcript').innerHTML='';
+  const useWeb=$('webToggle').checked;
+
+  try{
+    /* PHASE II — OPENING */
+    setPhase(1);
+    addStageHead('PHASE II','Opening statements','Each member answers your question independently.');
+    const openCards={};
+    COUNCIL.forEach(m=>{seatState(m.key,'active');openCards[m.key]=msgCard(m);});
+    const openings={};
+    await Promise.all(COUNCIL.map(async m=>{
+      try{
+        const out=await callModel(m.model,m.fallback,[
+          {role:'system',content:memberSys(m)},
+          {role:'user',content:q}
+        ],useWeb&&m.key==='cor');
+        openings[m.key]=out;fillCard(openCards[m.key],out);seatState(m.key,'done');
+      }catch(e){openings[m.key]=null;failCard(openCards[m.key],e.message);seatState(m.key,'');}
+    }));
+    scrollEnd();
+
+    const transcriptOf=obj=>COUNCIL.filter(m=>obj[m.key]).map(m=>`### ${m.name} (${m.domain})\n${obj[m.key]}`).join('\n\n');
+
+    /* PHASE III — CROSS-EXAM */
+    setPhase(2);
+    addStageHead('PHASE III','Cross-examination','Each member reads the others and argues: what is wrong, what is right, what is missing.');
+    const board=transcriptOf(openings);
+    const debCards={};
+    COUNCIL.forEach(m=>{if(openings[m.key]!==null){seatState(m.key,'active');debCards[m.key]=msgCard(m);}});
+    const debates={};
+    await Promise.all(COUNCIL.filter(m=>openings[m.key]!==null).map(async m=>{
+      try{
+        const out=await callModel(m.model,m.fallback,[
+          {role:'system',content:memberSys(m)},
+          {role:'user',content:q},
+          {role:'assistant',content:openings[m.key]},
+          {role:'user',content:`All five opening statements:\n\n${board}\n\nNow cross-examine. Where are the others wrong or thin? Where are they right? What did everyone miss? Then defend or revise your own position. Be specific, use markdown formatting, and do not flatter.`}
+        ],false);
+        debates[m.key]=out;fillCard(debCards[m.key],out);seatState(m.key,'done');
+      }catch(e){debates[m.key]=openings[m.key];failCard(debCards[m.key],e.message);seatState(m.key,'');}
+    }));
+    scrollEnd();
+
+    /* ARBITER RUNNING SCORE */
+    addStageHead('','Arbiter — running score',`${ARBITER.name} weighs the cross-examination.`);
+    const scoreCard=msgCard({name:ARBITER.name,model:ARBITER.model,color:'var(--brass)'});
+    try{
+      const score=await callModel(ARBITER.model,ARBITER.fallback,[
+        {role:'system',content:ARB_DEBATE},
+        {role:'user',content:`User's question:\n${q}\n\nCross-examination:\n\n${transcriptOf(debates)}`}
+      ],false);
+      fillCard(scoreCard,score);
+    }catch(e){failCard(scoreCard,e.message);}
+    scrollEnd();
+
+    /* PHASE IV — CLOSING */
+    setPhase(3);
+    addStageHead('PHASE IV','Closing statements','After the argument, each member gives their refined final answer.');
+    const closeBoard=transcriptOf(debates);
+    const closeCards={};
+    COUNCIL.forEach(m=>{if(openings[m.key]!==null){seatState(m.key,'active');closeCards[m.key]=msgCard(m);}});
+    const closings={};
+    await Promise.all(COUNCIL.filter(m=>openings[m.key]!==null).map(async m=>{
+      try{
+        const out=await callModel(m.model,m.fallback,[
+          {role:'system',content:memberSys(m)},
+          {role:'user',content:`Question: ${q}\n\nThe cross-examination is done. Here is where the Council landed:\n\n${closeBoard}\n\nGive your final, refined answer now. Keep what survived scrutiny, fix what didn't. Use markdown formatting. Stay tight.`}
+        ],useWeb&&m.key==='cor');
+        closings[m.key]=out;fillCard(closeCards[m.key],out);seatState(m.key,'done');
+      }catch(e){closings[m.key]=debates[m.key]||openings[m.key];failCard(closeCards[m.key],e.message);seatState(m.key,'');}
+    }));
+    scrollEnd();
+
+    /* PHASE V — VERDICT */
+    setPhase(4);
+    addStageHead('PHASE V','The verdict',`${ARBITER.name} combines the strongest points into one answer.`);
+    const vWrap=document.createElement('div');vWrap.className='verdict';
+    vWrap.innerHTML=`<div class="who"><span class="nm">${ARBITER.name}</span><span class="md">${ARBITER.model.replace(':free','')}</span></div><div class="body"><span class="pulse" style="--seatc:var(--brass)"></span> writing the verdict…</div>`;
+    $('transcript').appendChild(vWrap);scrollEnd();
+    try{
+      const raw=await callModel(ARBITER.model,ARBITER.fallback,[
+        {role:'system',content:ARB_FINAL},
+        {role:'user',content:`User's question:\n${q}\n\nFinal closing statements:\n\n${transcriptOf(closings)}`}
+      ],false);
+      let parsed=null;
+      try{parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch(e){}
+      if(parsed&&parsed.final_answer){
+        vWrap.querySelector('.body').innerHTML=renderMD(parsed.final_answer);
+        const r=document.createElement('div');r.className='reasoning';
+        r.innerHTML=`<div class="lbl">Why the Arbiter chose this</div><div class="body">${renderMD(parsed.reasoning||'—')}</div>`;
+        $('transcript').appendChild(r);
+      }else{
+        vWrap.querySelector('.body').innerHTML=renderMD(raw);
+      }
+    }catch(e){vWrap.querySelector('.body').innerHTML=`<span class="err">⚠ ${e.message}</span>`;}
+
+    setPhase(5);
+    COUNCIL.forEach(m=>seatState(m.key,''));
+    scrollEnd();
+
+  }finally{
+    running=false;$('run').disabled=false;$('run').textContent='Convene the Council';
+  }
+}
+
+/* ============================================================ HELP */
+$('helpBody').innerHTML=`
+<b>How a session runs.</b> One question triggers five phases: opening statements (5 calls), cross-examination (5 calls), Arbiter running score (1 call), closing statements (5 calls), and the final verdict (1 call). That is about <b>17 model calls per question</b>.<br><br>
+<b>Auto-fallback.</b> Every council member has a backup model. If the primary returns a 404 (model went off free tier), the app automatically retries with the fallback slug — no manual fix needed unless both go down.<br><br>
+<b>Free-tier limits.</b> OpenRouter free models allow roughly <code>20 req/min</code> and <code>~50 req/day</code>. At 17 calls per session, that is about <b>2–3 sessions per day</b>. Individual members will show an error card if rate-limited — the rest of the Council keeps going.<br><br>
+<b>What $10 deposit unlocks.</b> Raises daily cap to <code>~1000 req/day</code> (50+ sessions), guarantees paid-route uptime when free slots are busy, and enables the <b>web search</b> toggle so the Correspondent pulls live news. Without credits, leave web search off.<br><br>
+<b>Swapping models.</b> If both a member's primary and fallback go off free tier, open this file and edit the <code>COUNCIL</code> array slugs at the top of the script. Always add <code>:free</code> suffix. Check <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a> and filter by price = free.<br><br>
+<b>Key safety.</b> Your key is stored in this browser's localStorage and sent directly to OpenRouter. Keep the file on your own machine.`;
+
+/* ============================================================ CORS CHECK */
+(function(){
+  const proto=location.protocol;
+  if(proto==='file:'||proto==='content:'||proto===null){
+    document.getElementById('corsWarn').style.display='block';
+  }
+})();
+
+buildBench();buildPhases();refreshKeyUI();
+$('saveKey').onclick=()=>{setKey($('key').value.trim());$('key').value='';refreshKeyUI();};
+$('key').addEventListener('keydown',e=>{if(e.key==='Enter')$('saveKey').click();});
+$('run').onclick=convene;
+$('prompt').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')convene();});
+</script>
+</body>
+</html>
