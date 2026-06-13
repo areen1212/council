@@ -311,8 +311,16 @@ Call out anyone who is confidently wrong, vague, or sycophantic.
 Use markdown. One or two lines per member, then one line on who is currently ahead.`;
 const ARB_FINAL=`You are The Arbiter of an AI Council — the most capable mind present.
 Synthesize ONE authoritative answer that takes the strongest, best-supported points from any member and discards the weak or wrong ones. Be decisive and practical. Use clear markdown formatting.
-Respond with ONLY valid JSON, no markdown wrapping, no backticks:
-{"final_answer":"the combined best answer in markdown format","reasoning":"2-5 sentences on which members you leaned on, what you cut, and why"}`;
+
+Structure your response EXACTLY like this — use these exact separator lines:
+
+===VERDICT===
+(Your synthesized final answer here, in markdown. No tables. No emojis. Clean headers, bullets, and paragraphs only.)
+
+===REASONING===
+(2-4 sentences on which members you leaned on, what you cut, and why.)
+
+Do not add anything before ===VERDICT=== or after the reasoning section.`;
 
 /* ============================================================ API CALL WITH FALLBACK */
 async function callModel(model, fallback, messages, useWeb){
@@ -332,7 +340,20 @@ async function callModel(model, fallback, messages, useWeb){
       if(res.status===404||res.status===422){
         const err=new Error('NOT_FREE:'+slug);err.notFree=true;err.detail=detail;throw err;
       }
-      if(res.status===429) throw new Error('Rate limited (free tier ~20/min, ~50/day). Wait a minute and try again, or deposit $10 for 1000/day.');
+      if(res.status===429){
+        // show waiting indicator in page title
+        const origTitle=document.title;
+        document.title='⏳ Rate limited — waiting 65s…';
+        await new Promise(r=>setTimeout(r,65000));
+        document.title=origTitle;
+        const res2=await fetch(API,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(res2.ok){
+          const data2=await res2.json();
+          const txt2=data2.choices?.[0]?.message?.content;
+          if(txt2) return Array.isArray(txt2)?txt2.map(p=>p.text||'').join(''):txt2;
+        }
+        throw new Error('Rate limited (free tier ~50 req/day). Deposit $10 on OpenRouter to unlock 1000 req/day.');
+      }
       if(res.status===401) throw new Error('Key rejected (401). Double-check your OpenRouter key.');
       if(res.status===402) throw new Error('Credits needed (402). Web search and some routes require a deposit on OpenRouter.');
       throw new Error('HTTP '+res.status+': '+detail);
@@ -496,15 +517,27 @@ async function convene(){
         {role:'system',content:ARB_FINAL},
         {role:'user',content:`User's question:\n${q}\n\nFinal closing statements:\n\n${transcriptOf(closings)}`}
       ],false);
-      let parsed=null;
-      try{parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch(e){}
-      if(parsed&&parsed.final_answer){
-        vWrap.querySelector('.body').innerHTML=renderMD(parsed.final_answer);
+      let verdictText='', reasoningText='';
+      const vIdx=raw.indexOf('===VERDICT===');
+      const rIdx=raw.indexOf('===REASONING===');
+      if(vIdx!==-1){
+        verdictText = rIdx!==-1
+          ? raw.slice(vIdx+13, rIdx).trim()
+          : raw.slice(vIdx+13).trim();
+        reasoningText = rIdx!==-1 ? raw.slice(rIdx+15).trim() : '';
+      } else {
+        // fallback: try old JSON format just in case
+        try{
+          const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+          verdictText=parsed.final_answer||raw;
+          reasoningText=parsed.reasoning||'';
+        }catch(e){ verdictText=raw; }
+      }
+      vWrap.querySelector('.body').innerHTML=renderMD(verdictText);
+      if(reasoningText){
         const r=document.createElement('div');r.className='reasoning';
-        r.innerHTML=`<div class="lbl">Why the Arbiter chose this</div><div class="body">${renderMD(parsed.reasoning||'—')}</div>`;
+        r.innerHTML=`<div class="lbl">Why the Arbiter chose this</div><div class="body">${renderMD(reasoningText)}</div>`;
         $('transcript').appendChild(r);
-      }else{
-        vWrap.querySelector('.body').innerHTML=renderMD(raw);
       }
     }catch(e){vWrap.querySelector('.body').innerHTML=`<span class="err">⚠ ${e.message}</span>`;}
 
